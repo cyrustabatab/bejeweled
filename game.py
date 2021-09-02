@@ -41,6 +41,9 @@ class Game:
         self.rows = rows
         self.cols = cols
         self.square_size = 64
+        self.board_width = self.square_size * self.cols
+        self.board_height = self.square_size * self.rows
+        self.selected = set()
         
 
         self.images = [pygame.image.load(os.path.join('assets',file)).convert_alpha() for file in os.listdir('assets') if file.endswith('png')]
@@ -87,6 +90,38 @@ class Game:
                 self.screen.blit(self.board[row][col],(self.side_padding + col * self.square_size,self.top_padding + row * self.square_size))
 
 
+        for row,col in self.selected:
+            x = self.side_padding + self.square_size * col
+            y = self.top_padding + self.square_size * row
+            pygame.draw.rect(self.screen,PURPLE,(x,y,self.square_size,self.square_size),2)
+
+
+
+
+    
+
+    def _highlight_square(self,x,y):
+
+
+        in_bounds = lambda x,y: self.side_padding < x < self.side_padding + self.board_width and self.top_padding < y < self.top_padding + self.board_height
+
+        get_row_and_col = lambda x,y:  ((y - self.top_padding)//self.square_size,(x - self.side_padding)//self.square_size)
+
+
+        if in_bounds(x,y):
+            row,col = get_row_and_col(x,y)
+            self.selected.add((row,col))
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -99,6 +134,10 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    x,y = pygame.mouse.get_pos()
+                    self._highlight_square(x,y)
+
 
             
             self.screen.fill(BGCOLOR)
