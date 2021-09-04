@@ -1,5 +1,7 @@
 import pygame,sys,os
+pygame.init()
 import random
+from glob import glob
 
 
 
@@ -36,6 +38,9 @@ class Game:
     TOP_PADDING = 50
     SIDE_PADDING = 100
     SQUARE_SIZE = 64
+    INVALID_SWAP_SOUND = pygame.mixer.Sound(os.path.join('assets','badswap.wav'))
+    SWAP_SOUNDS = [pygame.mixer.Sound(file) for file in glob('assets/match?.wav')]
+
 
     def __init__(self,screen,rows=8,cols=8):
 
@@ -97,10 +102,18 @@ class Game:
             x = self.side_padding + self.square_size * col
             y = self.top_padding + self.square_size * row
             pygame.draw.rect(self.screen,PURPLE,(x,y,self.square_size,self.square_size),2)
+    
+
+    def _is_neighbor_cell(self,row_1,col_1,row_2,col_2):
+
+
+        return abs(row_1 - row_2) <= 1 and abs(col_1 - col_2) <= 1
+
+
+
 
     
     def _swapAnimation(self,row_1,col_1,row_2,col_2):
-
 
         x1,y1 = self._get_x_and_y_from_row_col(row_1,col_1)
         x2,y2 = self._get_x_and_y_from_row_col(row_2,col_2)
@@ -109,13 +122,33 @@ class Game:
         image_2 = self.board[row_2][col_2]
 
 
+        _image_2 = image_2
+        _image_1 = image_1
+
+
 
         self.board[row_1][col_1] = self.board[row_2][col_2] = None
+        
+        horizontal= False
+        if col_1 != col_2:
+            horizontal = True
+            if x1 > x2:
+                x1,x2 = x2,x1
+                image_1,image_2 = image_2,image_1
+        else:
+            if y1 > y2:
+                y1,y2 = y2,y1
+                image_1,image_2 = image_2,image_1
 
+    
 
-        while x1 <= x2:
-            x1 += 5
-            x2 -= 5 
+        while x1 <= x2 if horizontal else y1 <= y2:
+            if horizontal:
+                x1 += 5
+                x2 -= 5 
+            else:
+                y1 += 5
+                y2 -= 5
             self.screen.fill(BGCOLOR)
             self._draw_board()
             self.screen.blit(image_1,(x1,y1))
@@ -123,8 +156,8 @@ class Game:
             pygame.display.update()
             self.clock.tick(FPS)
 
-        self.board[row_1][col_1] = image_2
-        self.board[row_2][col_2] = image_1
+        self.board[row_1][col_1] = _image_2
+        self.board[row_2][col_2] = _image_1
 
 
 
@@ -148,17 +181,23 @@ class Game:
     
     def _swapIfPossible(self):
 
+        
         square_1,square_2 = self.selected
 
         row_1,col_1 = square_1
         row_2,col_2 = square_2
         
 
-        if self.board[row_1][col_1] is not self.board[row_2][col_2]:
+        if self._is_neighbor_cell(row_1,col_1,row_2,col_2) and self.board[row_1][col_1] is not self.board[row_2][col_2]:
+            random.choice(self.SWAP_SOUNDS).play()
             self._swapAnimation(row_1,col_1,row_2,col_2)
+        else:
+            self.INVALID_SWAP_SOUND.play()
 
 
         self.selected.clear()
+
+        return (row_1,col_1),(row_2,col_2)
 
 
 
@@ -191,6 +230,8 @@ class Game:
 
 
 
+    def _checkForThreeInARow(self,square_1,square_2):
+        pass
 
 
 
@@ -208,11 +249,11 @@ class Game:
                     x,y = pygame.mouse.get_pos()
                     self._highlight_square(x,y)
                     if len(self.selected) == 2:
-                        self._swapIfPossible()
+                        square_1,square_2 = self._swapIfPossible()
+                        self._checkForThreeInARow(square_1,square_2)
 
 
 
-            
             self.screen.fill(BGCOLOR)
             self._draw_board()
             pygame.display.update()
