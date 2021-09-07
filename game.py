@@ -225,16 +225,94 @@ class Game:
 
 
 
+    
+
+    def _check_direction(self,square,direction_delta):
+
+        row_diff,col_diff = direction_delta
+
+        row,col = square
+        
+        is_valid = False
+
+        image = self.board[row][col]
+
+        count = 1
+
+        current_row,current_col = row + row_diff,col + col_diff
+
+        in_bounds = lambda x,y: (0 <= current_row < len(self.board)) and (0 <= current_col < len(self.board[0]))
+        
+
+
+
+        while in_bounds(current_row,current_col) and self.board[current_row][current_col] is image:
+            count += 1
+            current_row += row_diff
+            current_col += col_diff
+
+
+
+        if count >= 3:
+            row_diff *= -1
+            col_diff *= -1
+            current_row += row_diff
+            current_col += col_diff
+            while in_bounds(current_row,current_col) and self.board[current_row][current_col] is image:
+                self.board[current_row][current_col] = None
+                current_row += row_diff
+                current_col += col_diff
+
+
+            is_valid = True
+
+
+        return is_valid
 
 
 
 
 
-    def _checkForThreeInARow(self,square_1,square_2):
-        pass
 
 
 
+
+
+    def _checkForThreeInARow(self,square_1,square_2) -> bool:
+
+        direction_deltas = [(0,1),(1,0),(-1,0),(0,-1)]
+        
+
+        # do temp swap
+        row_1,col_1 = square_1 
+        row_2,col_2 = square_2
+        self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
+        is_valid = False
+        for square in (square_1,square_2):
+            row,col = square
+            if self.board[row][col]:
+                square_valid = False
+                for direction_delta in direction_deltas:
+                    square_valid = square_valid or self._check_direction(square,direction_delta)
+
+                is_valid = is_valid or square_valid
+
+
+                if square_valid:
+                    row,col = square
+                    self.board[row][col] = None
+
+
+        
+        if not is_valid:
+            # swap back
+            self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
+            self.INVALID_SWAP_SOUND.play()
+        else:
+            random.choice(self.SWAP_SOUNDS).play()
+
+
+        return is_valid
 
 
     def _play(self):
@@ -249,8 +327,11 @@ class Game:
                     x,y = pygame.mouse.get_pos()
                     self._highlight_square(x,y)
                     if len(self.selected) == 2:
-                        square_1,square_2 = self._swapIfPossible()
+                        square_1,square_2 = self.selected
+
                         self._checkForThreeInARow(square_1,square_2)
+
+                        self.selected.clear()
 
 
 
