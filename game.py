@@ -74,11 +74,25 @@ class Game:
         self.side_padding = (self.screen_width - self.square_size * self.cols)//2
         self.board = []
         for row in range(self.rows):
-            row = []
+            new_row = []
             for col in range(self.cols):
-                row.append(random.choice(self.images))
+                # check two cols to left 
+                removed_images = []
+                if col - 2 >= 0 and new_row[col -1] is new_row[col -2]:
+                    removed_images.append(new_row[col -1])
+                    self.images.remove(new_row[col -1])
+
+                if row - 2 >= 0 and self.board[row -1][col] is self.board[row -2][col]:
+                    image = self.board[row -1][col]
+                    if image not in removed_images:
+                        removed_images.append(image)
+                        self.images.remove(removed_images[-1])
+                new_row.append(random.choice(self.images))
+
+                for image in removed_images:
+                    self.images.append(image)
             
-            self.board.append(row)
+            self.board.append(new_row)
     
 
     def _draw_board(self):
@@ -228,11 +242,14 @@ class Game:
     
 
     def _check_direction(self,square,direction_delta):
+        
+
+
+        
+
 
         row_diff,col_diff = direction_delta
-
         row,col = square
-        
         is_valid = False
 
         image = self.board[row][col]
@@ -243,13 +260,28 @@ class Game:
 
         in_bounds = lambda x,y: (0 <= current_row < len(self.board)) and (0 <= current_col < len(self.board[0]))
         
+        
+        
 
 
+        
+        start_end = []
 
-        while in_bounds(current_row,current_col) and self.board[current_row][current_col] is image:
-            count += 1
-            current_row += row_diff
-            current_col += col_diff
+        
+        for _ in range(2):
+            while in_bounds(current_row,current_col) and self.board[current_row][current_col] is image:
+                count += 1
+                current_row += row_diff
+                current_col += col_diff
+
+            cell = (current_row - row_diff,current_col + row_diff)
+            start_end.append(cell)
+
+            row_diff *= -1
+            col_diff *= -1
+
+            current_row = row + row_diff
+            current_col = col + col_diff
 
 
 
@@ -263,11 +295,12 @@ class Game:
                 current_row += row_diff
                 current_col += col_diff
 
-
+            
+            self.board[row][col] = image
             is_valid = True
 
 
-        return is_valid
+        return is_valid,start_end if start_end else None
 
 
 
@@ -280,20 +313,30 @@ class Game:
 
     def _checkForThreeInARow(self,square_1,square_2) -> bool:
 
-        direction_deltas = [(0,1),(1,0),(-1,0),(0,-1)]
+        direction_deltas = [(0,1),(1,0)]
         
 
         # do temp swap
         row_1,col_1 = square_1 
         row_2,col_2 = square_2
+        if self.board[row_1][col_1] is self.board[row_2][col_2]:
+            return 
+
         self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
         is_valid = False
+        previous_count = None
+        start_ends = []
         for square in (square_1,square_2):
             row,col = square
             if self.board[row][col]:
                 square_valid = False
                 for direction_delta in direction_deltas:
-                    square_valid = square_valid or self._check_direction(square,direction_delta)
+                    valid_direction,start_end = self._check_direction(square,direction_delta)
+                    if start_end:
+                        start_ends.append(start_end)
+
+
+                    square_valid = square_valid or valid_direction
 
                 is_valid = is_valid or square_valid
 
@@ -312,8 +355,10 @@ class Game:
             random.choice(self.SWAP_SOUNDS).play()
 
 
-        return is_valid
-
+        return start_ends
+    
+    def _dropAndInsertNewPieces(self,start_ends):
+        pass
 
     def _play(self):
 
@@ -329,7 +374,10 @@ class Game:
                     if len(self.selected) == 2:
                         square_1,square_2 = self.selected
 
-                        self._checkForThreeInARow(square_1,square_2)
+                        start_ends = self._checkForThreeInARow(square_1,square_2)
+                        if start_ends:
+                            self._dropAndInsertNewPieces(start_ends)
+
 
                         self.selected.clear()
 
