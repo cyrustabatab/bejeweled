@@ -1,4 +1,5 @@
 import pygame,sys,os
+import pprint as pp
 pygame.init()
 import random
 from glob import glob
@@ -28,6 +29,38 @@ class Menu:
 
 
 
+class Square(pygame.sprite.Sprite):
+
+
+    def __init__(self,x,y,image):
+        super().__init__()
+
+        self.image = image
+        self.rect = self.image.get_rect(topleft=(x,y))
+        self.moving = False
+    
+
+    def update(self):
+        if self.moving:
+            if self.rect.y < self.target_y:
+                self.rect.y += 5
+            else:
+                self.rect.y = self.target_y
+                self.moving = False
+
+
+
+
+    
+    def _set_target_y(self,squares_removed, square_size):
+        self.target_y = self.rect.y + square_size * squares_removed
+        self.moving = True
+
+
+    
+    def equals(self,square):
+        if isinstance(square,Square):
+            return square.image is self.image
 
 
 
@@ -72,22 +105,26 @@ class Game:
         
         self.top_padding = (self.screen_height - self.square_size * self.rows)//2
         self.side_padding = (self.screen_width - self.square_size * self.cols)//2
+        self.squares = pygame.sprite.Group()
         self.board = []
         for row in range(self.rows):
             new_row = []
             for col in range(self.cols):
                 # check two cols to left 
                 removed_images = []
-                if col - 2 >= 0 and new_row[col -1] is new_row[col -2]:
-                    removed_images.append(new_row[col -1])
-                    self.images.remove(new_row[col -1])
+                if col - 2 >= 0 and new_row[col -1].image is new_row[col -2].image:
+                    removed_images.append(new_row[col -1].image)
+                    self.images.remove(new_row[col -1].image)
 
-                if row - 2 >= 0 and self.board[row -1][col] is self.board[row -2][col]:
-                    image = self.board[row -1][col]
+                if row - 2 >= 0 and self.board[row -1][col].image is self.board[row -2][col].image:
+                    image = self.board[row -1][col].image
                     if image not in removed_images:
                         removed_images.append(image)
                         self.images.remove(removed_images[-1])
-                new_row.append(random.choice(self.images))
+                image = random.choice(self.images)
+                square = Square(*self._get_x_and_y_from_row_col(row,col),image)
+                new_row.append(square)
+                self.squares.add(square)
 
                 for image in removed_images:
                     self.images.append(image)
@@ -105,12 +142,13 @@ class Game:
             pygame.draw.line(self.screen,BLACK,(self.side_padding + x * self.square_size,self.top_padding),(self.side_padding + x * self.square_size,self.top_padding + self.square_size * self.rows))
 
         
-        
+        ''' 
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.board[row][col]:
                     self.screen.blit(self.board[row][col],(self.side_padding + col * self.square_size,self.top_padding + row * self.square_size))
-
+        '''
+        self.squares.draw(self.screen)
 
         for row,col in self.selected:
             x = self.side_padding + self.square_size * col
@@ -132,8 +170,8 @@ class Game:
         x1,y1 = self._get_x_and_y_from_row_col(row_1,col_1)
         x2,y2 = self._get_x_and_y_from_row_col(row_2,col_2)
 
-        image_1 = self.board[row_1][col_1]
-        image_2 = self.board[row_2][col_2]
+        image_1 = self.board[row_1][col_1].image
+        image_2 = self.board[row_2][col_2].image
 
 
         _image_2 = image_2
@@ -251,8 +289,7 @@ class Game:
         row_diff,col_diff = direction_delta
         row,col = square
         is_valid = False
-
-        image = self.board[row][col]
+        image = self.board[row][col].image
 
         count = 1
 
@@ -268,35 +305,36 @@ class Game:
         start_end = []
 
         
-        for _ in range(2):
-            while in_bounds(current_row,current_col) and self.board[current_row][current_col] is image:
+        for i in range(2):
+            while in_bounds(current_row,current_col) and self.board[current_row][current_col].image is image:
                 count += 1
                 current_row += row_diff
                 current_col += col_diff
-
+            
             cell = (current_row - row_diff,current_col + row_diff)
-            start_end.append(cell)
+            
+            if i == 0:
+                row_diff *= -1
+                col_diff *= -1
 
-            row_diff *= -1
-            col_diff *= -1
-
-            current_row = row + row_diff
-            current_col = col + col_diff
-
-
+                current_row = row + row_diff
+                current_col = col + col_diff
 
         if count >= 3:
             row_diff *= -1
             col_diff *= -1
             current_row += row_diff
             current_col += col_diff
-            while in_bounds(current_row,current_col) and self.board[current_row][current_col] is image:
-                self.board[current_row][current_col] = None
+            start_end.append((current_row,current_col))
+            while in_bounds(current_row,current_col) and self.board[current_row][current_col].image is image:
+                #self.board[current_row][current_col] = None
                 current_row += row_diff
                 current_col += col_diff
 
+            start_end.append((current_row - row_diff,current_col - col_diff))
+
             
-            self.board[row][col] = image
+            #self.board[row][col] = image
             is_valid = True
 
 
@@ -306,7 +344,8 @@ class Game:
 
 
 
-
+    def _swapLocations(self,square_1,square_2):
+        square_1.rect,square_2.rect = square_2.rect,square_1.rect
 
 
 
@@ -319,9 +358,10 @@ class Game:
         # do temp swap
         row_1,col_1 = square_1 
         row_2,col_2 = square_2
-        if self.board[row_1][col_1] is self.board[row_2][col_2]:
+        if self.board[row_1][col_1].equals(self.board[row_2][col_2]):
             return 
-
+        
+        self._swapLocations(self.board[row_1][col_1],self.board[row_2][col_2])
         self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
         is_valid = False
         previous_count = None
@@ -343,12 +383,13 @@ class Game:
 
                 if square_valid:
                     row,col = square
-                    self.board[row][col] = None
+                    #self.board[row][col] = None
 
 
         
         if not is_valid:
             # swap back
+            self._swapLocations(self.board[row_1][col_1],self.board[row_2][col_2])
             self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
             self.INVALID_SWAP_SOUND.play()
         else:
@@ -357,8 +398,63 @@ class Game:
 
         return start_ends
     
+
+    def _dropAllPiecesMultipleColumns(self,min_row,max_row,col):
+        
+        _,goal_y = self._get_x_and_y_from_row_col(max_row,col) 
+
+
+        current_coordinate = {}
+
+
+        while True:
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+            movement = False
+            for r in reversed(range(0,min_row)): 
+                for col in range(min_col,max_col + 1):
+                    current_x,current_y = self._get_x_and_y_from_row_col(r,col)
+                    
+                    if (r,col) not in current_coordinate:
+                        current_coordinate[(r,col)] = [current_x,current_y,self.board[r][col]]
+                        self.board[r][col] = None
+                    if current_coordinate[(r,col)][1] < goal_y:
+                        current_coordinate[(r,col)][1] += 2
+                        movement = True
+                    
+                    x,y,image = current_coordinate[(r,col)]
+                    self.screen.blit(image,(x,y))
+            if not movement:
+                return
+            
+            self.screen.fill(BGCOLOR)
+            self._draw_board()
+            pygame.display.update()
+            self.clock.tick(FPS)
+
     def _dropAndInsertNewPieces(self,start_ends):
-        pass
+        
+        print(start_ends)
+
+        for start_end in start_ends:
+            square_1,square_2 = start_end
+            if square_1[0] == square_2[0]:
+               col_1,col_2  = square_1[1],square_2[1]
+               min_col = min(col_1,col_2)
+               max_col = max(col_1,col_2)
+               row = square_1[0]
+               self._dropAllPiecesMultipleColumns(row,min_col,max_col)
+            else:
+                col = square_1[1]
+                min_row = min(square_1[0],square_2[0])
+                max_row = max(square_1[0],square_2[0])
+                self._dropAndInsertNewPieces(max_row,min_row,col)
+
+
+
 
     def _play(self):
 
@@ -376,7 +472,8 @@ class Game:
 
                         start_ends = self._checkForThreeInARow(square_1,square_2)
                         if start_ends:
-                            self._dropAndInsertNewPieces(start_ends)
+                            pass
+                            #self._dropAndInsertNewPieces(start_ends)
 
 
                         self.selected.clear()
