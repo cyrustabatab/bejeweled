@@ -48,6 +48,14 @@ class Square(pygame.sprite.Sprite):
                 self.rect.y = self.target_y
                 self.moving = False
 
+    
+    def set_target_diff(self,y_diff):
+
+        self.target_y = self.rect.y + y_diff
+        self.moving = True
+
+
+
 
 
 
@@ -327,14 +335,14 @@ class Game:
             current_col += col_diff
             start_end.append((current_row,current_col))
             while in_bounds(current_row,current_col) and self.board[current_row][current_col].image is image:
-                #self.board[current_row][current_col] = None
+                square = self.board[current_row][current_col]
+                square.kill()
                 current_row += row_diff
                 current_col += col_diff
 
             start_end.append((current_row - row_diff,current_col - col_diff))
 
             
-            #self.board[row][col] = image
             is_valid = True
 
 
@@ -437,7 +445,7 @@ class Game:
 
     def _dropAndInsertNewPieces(self,start_ends):
         
-        print(start_ends)
+
 
         for start_end in start_ends:
             square_1,square_2 = start_end
@@ -451,7 +459,36 @@ class Game:
                 col = square_1[1]
                 min_row = min(square_1[0],square_2[0])
                 max_row = max(square_1[0],square_2[0])
-                self._dropAndInsertNewPieces(max_row,min_row,col)
+                squares_cleared = max_row - min_row + 1
+
+                x,_ = self._get_x_and_y_from_row_col(max_row,col) 
+
+                
+                
+                squares_to_add = (max_row + 1) - (min_row)
+                print(squares_cleared,min_row)
+                print(squares_to_add)
+            
+                current_row = max_row
+                for row in reversed(range(0,min_row)):
+                    self.board[row][col].set_target_diff(squares_cleared * self.square_size)
+                    self.board[current_row][col] = self.board[row][col]
+                    current_row -= 1
+
+                if squares_to_add > 0:
+
+                    for i in range(squares_to_add):
+                        square = Square(x,(self.top_padding) - 64 * (i + 1),random.choice(self.images))
+                        square.set_target_diff(squares_to_add * self.square_size)
+                        self.board[squares_to_add -1 - i][col] = square
+                        self.squares.add(square)
+
+
+
+                
+
+
+               # self._dropAndInsertNewPieces(max_row,min_row,col)
 
 
 
@@ -472,14 +509,14 @@ class Game:
 
                         start_ends = self._checkForThreeInARow(square_1,square_2)
                         if start_ends:
-                            pass
-                            #self._dropAndInsertNewPieces(start_ends)
+                            self._dropAndInsertNewPieces(start_ends)
 
 
                         self.selected.clear()
 
 
-
+        
+            self.squares.update()
             self.screen.fill(BGCOLOR)
             self._draw_board()
             pygame.display.update()
