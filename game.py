@@ -2,6 +2,7 @@ import pygame,sys,os
 import pprint as pp
 pygame.init()
 import random
+import time
 from glob import glob
 
 
@@ -10,6 +11,7 @@ WHITE = (255,) * 3
 BLACK = (0,) * 3
 PURPLE = (255,0,255)
 BGCOLOR = (170,190,255)
+GREEN = (0,255,0)
 FPS = 60
 
 
@@ -81,6 +83,7 @@ class Game:
     SQUARE_SIZE = 64
     INVALID_SWAP_SOUND = pygame.mixer.Sound(os.path.join('assets','badswap.wav'))
     SWAP_SOUNDS = [pygame.mixer.Sound(file) for file in glob('assets/match?.wav')]
+    SCORE_FONT = pygame.font.SysFont("calibri",25,bold=True)
 
 
     def __init__(self,screen,rows=8,cols=8):
@@ -92,6 +95,9 @@ class Game:
         self.board_height = self.square_size * self.rows
         self.clock = pygame.time.Clock()
         self.selected = set()
+        self.hundred_text = self.SCORE_FONT.render("+100",True,GREEN)
+
+
         
 
         self.images = [pygame.image.load(os.path.join('assets',file)).convert_alpha() for file in os.listdir('assets') if file.endswith('png')]
@@ -442,6 +448,37 @@ class Game:
             self._draw_board()
             pygame.display.update()
             self.clock.tick(FPS)
+    
+
+    def _dropAColumn(self,min_row,max_row,col):
+        '''
+            col = square_1[1]
+            min_row = min(square_1[0],square_2[0])
+            max_row = max(square_1[0],square_2[0])
+        '''
+
+        squares_cleared = max_row - min_row + 1
+        x,_ = self._get_x_and_y_from_row_col(max_row,col) 
+
+            
+            
+        squares_to_add = (max_row + 1) - (min_row)
+    
+        current_row = max_row
+        for row in reversed(range(0,min_row)):
+            self.board[row][col].set_target_diff(squares_cleared * self.square_size)
+            self.board[current_row][col] = self.board[row][col]
+            current_row -= 1
+
+        if squares_to_add > 0:
+
+            for i in range(squares_to_add):
+                square = Square(x,(self.top_padding) - 64 * (i + 1),random.choice(self.images))
+                square.set_target_diff(squares_to_add * self.square_size)
+                self.board[squares_to_add -1 - i][col] = square
+                self.squares.add(square)
+
+
 
     def _dropAndInsertNewPieces(self,start_ends):
         
@@ -454,11 +491,14 @@ class Game:
                min_col = min(col_1,col_2)
                max_col = max(col_1,col_2)
                row = square_1[0]
-               self._dropAllPiecesMultipleColumns(row,min_col,max_col)
+               for col in range(min_col,max_col + 1):
+                   self._dropAColumn(row,row,col)
             else:
                 col = square_1[1]
                 min_row = min(square_1[0],square_2[0])
                 max_row = max(square_1[0],square_2[0])
+                self._dropAColumn(min_row,max_row,col)
+                '''
                 squares_cleared = max_row - min_row + 1
 
                 x,_ = self._get_x_and_y_from_row_col(max_row,col) 
@@ -489,13 +529,39 @@ class Game:
 
 
                # self._dropAndInsertNewPieces(max_row,min_row,col)
+               '''
+
+    
+    def _get_middle_between_two_squares(self,start_ends):
+
+
+
+
+        for start_end in start_ends:
+            square_1,square_2 = start_end
+
+
+            if square_1[0] == square_2[0]:
+
+
+                row = square_1[0]
+                min_value = min(square_1[1],square_2[1])
+                max_value = max(square_1[1],square_2[1])
+
+                min_x,min_y = self._get_x_and_y_from_row_col(row,min_value)
+                max_x,max_y = self._get_x_and_y_from_row_col(row,max_value)
+
+                return min_x + (max_x + self.square_size - min_x)//2 - self.hundred_text.get_width()//2,min_y + self.square_size//2 - self.hundred_text.get_height()//2
+
+
+
 
 
 
 
     def _play(self):
 
-
+        score_start_time = None
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -509,16 +575,24 @@ class Game:
 
                         start_ends = self._checkForThreeInARow(square_1,square_2)
                         if start_ends:
+                            x_score,y_score =self._get_middle_between_two_squares(start_ends)
+                            score_start_time = time.time()
                             self._dropAndInsertNewPieces(start_ends)
 
 
                         self.selected.clear()
 
+            if score_start_time:
+                current_time = time.time()
+                if current_time - score_start_time >= 1:
+                    score_start_time = None
 
         
             self.squares.update()
             self.screen.fill(BGCOLOR)
             self._draw_board()
+            if score_start_time:
+                self.screen.blit(self.hundred_text,(x_score,y_score))
             pygame.display.update()
 
 
