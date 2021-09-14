@@ -95,6 +95,7 @@ class Game:
         self.board_height = self.square_size * self.rows
         self.clock = pygame.time.Clock()
         self.selected = set()
+        self.score_texts = []
         self.hundred_text = self.SCORE_FONT.render("+100",True,GREEN)
 
 
@@ -537,6 +538,10 @@ class Game:
 
 
 
+
+
+
+
         for start_end in start_ends:
             square_1,square_2 = start_end
 
@@ -547,11 +552,38 @@ class Game:
                 row = square_1[0]
                 min_value = min(square_1[1],square_2[1])
                 max_value = max(square_1[1],square_2[1])
+                squares = max_value - min_value + 1
+
+                score = 100 + 20 * (squares - 3)
+
+
+                score_text = self.SCORE_FONT.render(f"+{score}",True,GREEN)
+
 
                 min_x,min_y = self._get_x_and_y_from_row_col(row,min_value)
                 max_x,max_y = self._get_x_and_y_from_row_col(row,max_value)
 
-                return min_x + (max_x + self.square_size - min_x)//2 - self.hundred_text.get_width()//2,min_y + self.square_size//2 - self.hundred_text.get_height()//2
+                value=  min_x + (max_x + self.square_size - min_x)//2 - self.hundred_text.get_width()//2,min_y + self.square_size//2 - self.hundred_text.get_height()//2
+                self.score_texts.append((score_text,value))
+            else:
+                col = square_1[1]
+
+                min_value = min(square_1[0],square_2[0])
+                max_value = max(square_1[0],square_2[0])
+
+
+                squares = max_value - min_value + 1
+
+                score = 100 + 20 * (squares - 3)
+
+
+                score_text = self.SCORE_FONT.render(f"+{score}",True,GREEN)
+
+                min_x,min_y = self._get_x_and_y_from_row_col(min_value,col)
+                max_x,max_y = self._get_x_and_y_from_row_col(max_value,col)
+
+                value = min_x + self.square_size//2 - self.hundred_text.get_width()//2,min_y +(max_y - min_y)//2 - self.hundred_text.get_height()//2
+                self.score_texts.append((score_text,value))
 
 
 
@@ -575,7 +607,7 @@ class Game:
 
                         start_ends = self._checkForThreeInARow(square_1,square_2)
                         if start_ends:
-                            x_score,y_score =self._get_middle_between_two_squares(start_ends)
+                            self._get_middle_between_two_squares(start_ends)
                             score_start_time = time.time()
                             self._dropAndInsertNewPieces(start_ends)
 
@@ -586,13 +618,16 @@ class Game:
                 current_time = time.time()
                 if current_time - score_start_time >= 1:
                     score_start_time = None
+                    self.score_texts = []
 
         
             self.squares.update()
             self.screen.fill(BGCOLOR)
             self._draw_board()
             if score_start_time:
-                self.screen.blit(self.hundred_text,(x_score,y_score))
+                for score,coordinate in self.score_texts:
+                    self.screen.blit(score,coordinate)
+
             pygame.display.update()
 
 
