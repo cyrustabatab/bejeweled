@@ -145,6 +145,14 @@ class Game:
                     self.images.append(image)
             
             self.board.append(new_row)
+
+
+        self.board[0][0].image = self.images[0]
+        self.board[0][1].image = self.images[1]
+        self.board[0][2].image = self.images[1]
+        self.board[1][0].image = self.images[1]
+        self.board[1][1].image = self.images[0]
+        self.board[1][2].image = self.images[0]
     
 
     def _draw_board(self):
