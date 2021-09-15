@@ -4,8 +4,9 @@ pygame.init()
 import random
 import time
 from glob import glob
+from collections import defaultdict
 
-
+# for each col find deepest 
 
 WHITE = (255,) * 3
 BLACK = (0,) * 3
@@ -13,7 +14,6 @@ PURPLE = (255,0,255)
 BGCOLOR = (170,190,255)
 GREEN = (0,255,0)
 FPS = 60
-
 
 SQUARE_SIZE = 64
 
@@ -483,7 +483,11 @@ class Game:
 
     def _dropAndInsertNewPieces(self,start_ends):
         
+        
 
+        start_ends.sort()
+        
+        check_squares_range = []
 
         for start_end in start_ends:
             square_1,square_2 = start_end
@@ -493,11 +497,14 @@ class Game:
                max_col = max(col_1,col_2)
                row = square_1[0]
                for col in range(min_col,max_col + 1):
+                   check_squares_range.append(((col,0),(col,row)))
                    self._dropAColumn(row,row,col)
+
             else:
                 col = square_1[1]
                 min_row = min(square_1[0],square_2[0])
                 max_row = max(square_1[0],square_2[0])
+                check_squares_range.append(((col,0),(col,max_row)))
                 self._dropAColumn(min_row,max_row,col)
                 '''
                 squares_cleared = max_row - min_row + 1
@@ -584,6 +591,43 @@ class Game:
 
                 value = min_x + self.square_size//2 - self.hundred_text.get_width()//2,min_y +(max_y - min_y)//2 - self.hundred_text.get_height()//2
                 self.score_texts.append((score_text,value))
+
+
+
+    
+
+    def _get_true_start_ends(self,start_ends):
+
+        col_to_max_row =defaultdict(int)
+
+        for square_1,square_2 in start_ends:
+            row_1,col_1 = square_1
+            row_2,col_2 = square_2
+
+            if row_1 == row_2:
+                min_col = min(col_1,col_2)
+                max_col = max(col_1,col_2)
+                for col in range(min_col,max_col + 1):
+                    col_to_max_row[col] = max(col_to_max_row[col],row_1)
+            else:
+                max_row = max(row_1,row_2)
+                col_to_max_row[col_1] = max(col_to_max_row[col_1],max_row)
+
+
+
+
+        
+
+
+
+
+
+
+            
+
+
+
+
 
 
 
