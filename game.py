@@ -6,7 +6,9 @@ import time
 from glob import glob
 from collections import defaultdict
 
-# for each col find deepest 
+# for each col find streak of consecutive pieces 
+# start from max row to clear form each col and progress upwards
+# tonight add timer action mode
 
 WHITE = (255,) * 3
 BLACK = (0,) * 3
