@@ -315,6 +315,7 @@ class Game:
         row,col = square
         is_valid = False
         image = self.board[row][col].image
+        square_ = self.board[row][col]
 
         count = 1
 
@@ -353,14 +354,14 @@ class Game:
             start_end.append((current_row,current_col))
             while in_bounds(current_row,current_col) and self.board[current_row][current_col].image is image:
                 square = self.board[current_row][current_col]
+                self.board[current_row][current_col] = None
                 square.kill()
                 current_row += row_diff
                 current_col += col_diff
 
             start_end.append((current_row - row_diff,current_col - col_diff))
-
-            
             is_valid = True
+            self.board[row][col] = square_
 
 
         return is_valid,start_end if start_end else None
@@ -406,9 +407,7 @@ class Game:
                 is_valid = is_valid or square_valid
 
 
-                if square_valid:
-                    row,col = square
-                    #self.board[row][col] = None
+        
 
 
         
@@ -418,6 +417,7 @@ class Game:
             self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
             self.INVALID_SWAP_SOUND.play()
         else:
+            self.board[row_1][col_1] = self.board[row_2][col_2] = None
             random.choice(self.SWAP_SOUNDS).play()
 
 
@@ -624,16 +624,44 @@ class Game:
                 col_to_max_row[col_1] = max(col_to_max_row[col_1],max_row)
 
 
+    
+    def _dropAndInsertNewPieces2(self,start_ends):
 
+        row_to_max_col = defaultdict(int)
+
+
+        for square_1,square_2 in start_ends:
+            row_1,col_1 = square_1
+            row_2,col_2 = square_2
+
+            row_to_max_col[col_1] = max(row_to_max_col[col_1],row_1)
+            row_to_max_col[col_2] = max(row_to_max_col[col_2],row_2)
 
         
 
 
+        for col,row in row_to_max_col.items():
+            current_row = row - 1
+            
 
-
-
+            remvoved = 0
+            while current_row >= 0:
+                count += 1
+                if self.board[current_row][col] is not None:
+                    self.board[current_row][col].set_target_diff(self.square_size *count)
+                else:
+                    removed += 1
 
             
+            
+            x,_ = self._get_x_and_y_from_row_col(row,col)
+            for i in range(removed):
+                square = Square(x,self.top_padding - self.square_size * i)
+                square.set_target_diff(removed * self.square_size)
+                self.squares.add(square)
+
+
+
 
 
 
@@ -663,7 +691,7 @@ class Game:
                         if start_ends:
                             self._get_middle_between_two_squares(start_ends)
                             score_start_time = time.time()
-                            self._dropAndInsertNewPieces(start_ends)
+                            self._dropAndInsertNewPieces2(start_ends)
 
 
                         self.selected.clear()
