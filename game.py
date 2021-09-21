@@ -627,36 +627,55 @@ class Game:
     
     def _dropAndInsertNewPieces2(self,start_ends):
 
+
+        print(start_ends)      
         row_to_max_col = defaultdict(int)
-
-
         for square_1,square_2 in start_ends:
             row_1,col_1 = square_1
             row_2,col_2 = square_2
 
-            row_to_max_col[col_1] = max(row_to_max_col[col_1],row_1)
-            row_to_max_col[col_2] = max(row_to_max_col[col_2],row_2)
-
         
 
 
+
+            if col_1 == col_2:
+                row_to_max_col[col] = min(row_1,row_2)
+            else:
+
+                min_col = min(col_1,col_2)
+                max_col = max(col_1,col_2)
+
+
+
+                for col in range(min_col,max_col + 1):
+                    row_to_max_col[col] = max(row_to_max_col[col],row_1)
+                    row_to_max_col[col] = max(row_to_max_col[col],row_2)
+
+        
+
+        print(row_to_max_col)
+
+
         for col,row in row_to_max_col.items():
-            current_row = row - 1
+            current_row = row
             
 
-            remvoved = 0
+            removed = 0
+            count = 0
             while current_row >= 0:
                 count += 1
                 if self.board[current_row][col] is not None:
                     self.board[current_row][col].set_target_diff(self.square_size *count)
                 else:
                     removed += 1
+                current_row -= 1
 
             
             
             x,_ = self._get_x_and_y_from_row_col(row,col)
+            print(removed)
             for i in range(removed):
-                square = Square(x,self.top_padding - self.square_size * i)
+                square = Square(x,self.top_padding - self.square_size * (i + 1),random.choice(self.images))
                 square.set_target_diff(removed * self.square_size)
                 self.squares.add(square)
 
