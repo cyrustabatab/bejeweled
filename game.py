@@ -9,6 +9,7 @@ from collections import defaultdict
 # for each col find streak of consecutive pieces 
 # start from max row to clear form each col and progress upwards
 # tonight add timer action mode
+# on new pieces dropped, create parallel matrix showing where pieces have been removed and just check each square for three in a row areas
 
 WHITE = (255,) * 3
 BLACK = (0,) * 3
@@ -75,6 +76,7 @@ class Square(pygame.sprite.Sprite):
             return square.image is self.image
 
 
+GEM_TO_SHAPE = {'gem1': 'P','gem2': 'C','gem3': 'D','gem4': 'S','gem5': 'H','gem6': 'B','gem7': 'T'}
 
 class Game:
     
@@ -102,8 +104,13 @@ class Game:
 
 
         
+        
+        #self.images = [pygame.image.load(os.path.join('assets',file)).convert_alpha() for file in os.listdir('assets') if file.endswith('png')]
+        self.mapping = {pygame.image.load(os.path.join('assets',file)).convert_alpha(): file.split(".")[0] for file in os.listdir('assets') if file.endswith('png')}
 
-        self.images = [pygame.image.load(os.path.join('assets',file)).convert_alpha() for file in os.listdir('assets') if file.endswith('png')]
+
+        self.images = list(self.mapping.keys())
+
         self.screen = screen
         self._initialize_board()
         self._play()
@@ -305,15 +312,15 @@ class Game:
 
     
 
-    def _check_direction(self,square,direction_delta):
+    def _check_direction(self,square,direction_delta,other_square):
         
 
 
         
-
 
         row_diff,col_diff = direction_delta
         row,col = square
+        other_row,other_col = other_square
         is_valid = False
         image = self.board[row][col].image
         square_ = self.board[row][col]
@@ -321,6 +328,9 @@ class Game:
         count = 1
 
         current_row,current_col = row + row_diff,col + col_diff
+
+
+
 
         in_bounds = lambda x,y: (0 <= current_row < len(self.board)) and (0 <= current_col < len(self.board[0]))
         
@@ -333,7 +343,7 @@ class Game:
 
         
         for i in range(2):
-            while in_bounds(current_row,current_col) and self.board[current_row][current_col].image is image:
+            while in_bounds(current_row,current_col) and self.board[current_row][current_col] and self.board[current_row][current_col].image is image:
                 count += 1
                 current_row += row_diff
                 current_col += col_diff
@@ -385,6 +395,8 @@ class Game:
         # do temp swap
         row_1,col_1 = square_1 
         row_2,col_2 = square_2
+
+
         if self.board[row_1][col_1].equals(self.board[row_2][col_2]):
             return 
         
@@ -393,13 +405,15 @@ class Game:
         is_valid = False
         previous_count = None
         start_ends = []
-
+        
+        print(square_1,square_2)
         for square in (square_1,square_2):
             row,col = square
+            other_square = square_2 if square is square_1 else square_1
             if self.board[row][col]:
                 square_valid = False
                 for direction_delta in direction_deltas:
-                    valid_direction,start_end = self._check_direction(square,direction_delta)
+                    valid_direction,start_end = self._check_direction(square,direction_delta,other_square)
                     if start_end:
                         start_ends.append(start_end)
 
@@ -408,9 +422,13 @@ class Game:
 
                 is_valid = is_valid or square_valid
 
-
-
-            if is_valid:
+            '''
+            if row_1 == row_2:
+                direction_deltas.pop(0)
+            else:
+                direction_deltas.pop()
+            '''
+            if square_valid:
                 self.board[row][col] = None # swap only after checking everything
 
 
@@ -637,7 +655,7 @@ class Game:
         for row in range(len(self.board)):
             for col in range(len(self.board[0])):
                 if self.board[row][col]:
-                    print(1,end=' ')
+                    print(GEM_TO_SHAPE[self.mapping[self.board[row][col].image]],end=' ')
                 else:
                     print(0,end=' ')
 
@@ -716,9 +734,13 @@ class Game:
 
                         start_ends = self._checkForThreeInARow(square_1,square_2)
                         if start_ends:
+                            print()
+                            self.print_board()
                             self._get_middle_between_two_squares(start_ends)
                             score_start_time = time.time()
                             self._dropAndInsertNewPieces2(start_ends)
+                            #self.print_board()
+                            print()
                             self.print_board()
 
                         self.selected.clear()
@@ -742,9 +764,8 @@ class Game:
 
 
 
-if __name__ == "__main__":
-    height,width = 600,1000
-    Menu(height,width)
+height,width = 600,1000
+Menu(height,width)
 
 
 
