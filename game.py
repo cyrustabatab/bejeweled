@@ -15,6 +15,7 @@ WHITE = (255,) * 3
 BLACK = (0,) * 3
 PURPLE = (255,0,255)
 BGCOLOR = (170,190,255)
+RED = (255,0,0)
 GREEN = (0,255,0)
 FPS = 60
 
@@ -32,6 +33,35 @@ class Menu:
 
         Game(self.screen)
 
+
+
+class Timer(pygame.sprite.Sprite):
+
+
+    def __init__(self,x,y,width,height,seconds=60):
+        super().__init__()
+
+        self.image = pygame.Surface((width,height))
+        self.image.fill(RED)
+        self.seconds = self.total_seconds = seconds
+
+
+
+        self.rect = self.image.get_rect(topleft=(x,y))
+    
+
+    def update(self):
+
+        self.seconds -= 1
+    
+
+    def increase_time(self):
+        self.seconds += 3
+        self.seconds = min(self.seconds,self.total_seconds)
+    def draw(self,screen):
+
+        screen.blit(self.image,self.rect)
+        pygame.draw.rect(screen,GREEN,(*self.rect.topleft,(self.seconds/self.total_seconds) * self.rect.width,self.rect.height))
 
 
 class Square(pygame.sprite.Sprite):
@@ -103,6 +133,9 @@ class Game:
         self.hundred_text = self.SCORE_FONT.render("+100",True,GREEN)
 
 
+
+
+
         
         
         #self.images = [pygame.image.load(os.path.join('assets',file)).convert_alpha() for file in os.listdir('assets') if file.endswith('png')]
@@ -112,7 +145,8 @@ class Game:
         self.images = list(self.mapping.keys())
 
         self.screen = screen
-        self._initialize_board()
+        self._initialize_board_and_timer()
+
         self._play()
     
     
@@ -124,7 +158,7 @@ class Game:
     def screen_width(self):
         return self.screen.get_width()
 
-    def _initialize_board(self):
+    def _initialize_board_and_timer(self):
 
         
         self.top_padding = (self.screen_height - self.square_size * self.rows)//2
@@ -154,6 +188,9 @@ class Game:
                     self.images.append(image)
             
             self.board.append(new_row)
+        
+        
+        self.timer = pygame.sprite.GroupSingle(Timer(self.side_padding,self.top_padding + self.board_height,self.board_width,self.top_padding))
 
 
         self.board[0][0].image = self.images[0]
@@ -187,6 +224,9 @@ class Game:
             x = self.side_padding + self.square_size * col
             y = self.top_padding + self.square_size * row
             pygame.draw.rect(self.screen,PURPLE,(x,y,self.square_size,self.square_size),2)
+
+
+        self.timer.sprite.draw(self.screen)
     
 
     def _is_neighbor_cell(self,row_1,col_1,row_2,col_2):
@@ -721,6 +761,9 @@ class Game:
     def _play(self):
 
         score_start_time = None
+
+        TIME_EVENT = pygame.USEREVENT + 2
+        pygame.time.set_timer(TIME_EVENT,1000)
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -734,6 +777,7 @@ class Game:
 
                         start_ends = self._checkForThreeInARow(square_1,square_2)
                         if start_ends:
+                            self.timer.sprite.increase_time()
                             print()
                             self.print_board()
                             self._get_middle_between_two_squares(start_ends)
@@ -744,6 +788,8 @@ class Game:
                             self.print_board()
 
                         self.selected.clear()
+                elif event.type == TIME_EVENT:
+                    self.timer.sprite.update()
 
             if score_start_time:
                 current_time = time.time()
