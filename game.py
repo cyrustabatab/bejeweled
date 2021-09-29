@@ -706,6 +706,10 @@ class Game:
 
         print(start_ends)      
         row_to_max_col = defaultdict(int)
+
+
+        squares_with_new_gems = []
+
         for square_1,square_2 in start_ends:
             row_1,col_1 = square_1
             row_2,col_2 = square_2
@@ -741,7 +745,9 @@ class Game:
             while current_row >= 0:
                 count += 1
                 if self.board[current_row][col] is not None:
+
                     self.board[current_row][col].set_target_diff(self.square_size *removed)
+                    squares_with_new_gems.append((current_row + removed,col))
                     self.board[current_row + removed][col] = self.board[current_row][col]
                 else:
                     removed += 1
@@ -754,9 +760,11 @@ class Game:
             for i in range(removed):
                 square = Square(x,self.top_padding - self.square_size * (i + 1),random.choice(self.images))
                 square.set_target_diff(removed * self.square_size)
+                squares_with_new_gems.append((removed -1 - i,col))
                 self.board[removed -1 - i][col] = square
                 self.squares.add(square)
-
+            
+        return squares_with_new_gems
 
     def _play(self):
 
@@ -782,8 +790,8 @@ class Game:
                             self.print_board()
                             self._get_middle_between_two_squares(start_ends)
                             score_start_time = time.time()
-                            self._dropAndInsertNewPieces2(start_ends)
-                            #self.print_board()
+                            squares_with_new_gems = self._dropAndInsertNewPieces2(start_ends)
+                            print(squares_with_new_gems)
                             print()
                             self.print_board()
 
