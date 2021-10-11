@@ -38,7 +38,7 @@ class Menu:
 class Timer(pygame.sprite.Sprite):
 
 
-    def __init__(self,x,y,width,height,seconds=60):
+    def __init__(self,x,y,width,height,seconds=10):
         super().__init__()
 
         self.image = pygame.Surface((width,height))
@@ -54,6 +54,9 @@ class Timer(pygame.sprite.Sprite):
 
         self.seconds -= 1
     
+
+    def at_zero(self):
+        return self.seconds == 0
 
     def increase_time(self):
         self.seconds += 3
@@ -131,6 +134,9 @@ class Game:
         self.selected = set()
         self.score_texts = []
         self.hundred_text = self.SCORE_FONT.render("+100",True,GREEN)
+        self.game_over = False
+        self.game_over_surface = pygame.Surface((self.board_width,self.board_height),flags=pygame.SRCALPHA)
+        self.game_over_surface.fill((0,0,0,128))
 
 
 
@@ -427,26 +433,27 @@ class Game:
 
 
 
-    def _checkForThreeInARow(self,square_1,square_2) -> bool:
+    def _checkForThreeInARow(self,square_1,square_2=None,on_move=True) -> bool:
 
         direction_deltas = [(0,1),(1,0)]
         
 
         # do temp swap
-        row_1,col_1 = square_1 
-        row_2,col_2 = square_2
+        if on_move:
+            row_1,col_1 = square_1 
+            row_2,col_2 = square_2
 
 
-        if self.board[row_1][col_1].equals(self.board[row_2][col_2]):
-            return 
-        
-        self._swapLocations(self.board[row_1][col_1],self.board[row_2][col_2])
-        self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
-        is_valid = False
-        previous_count = None
-        start_ends = []
-        
-        print(square_1,square_2)
+            if self.board[row_1][col_1].equals(self.board[row_2][col_2]):
+                return 
+            
+            self._swapLocations(self.board[row_1][col_1],self.board[row_2][col_2])
+            self.board[row_1][col_1],self.board[row_2][col_2] = self.board[row_2][col_2],self.board[row_1][col_1]
+            is_valid = False
+            previous_count = None
+            start_ends = []
+            
+            print(square_1,square_2)
         for square in (square_1,square_2):
             row,col = square
             other_square = square_2 if square is square_1 else square_1
@@ -765,7 +772,12 @@ class Game:
                 self.squares.add(square)
             
         return squares_with_new_gems
+    
 
+    def _check_squares_with_new_gems(self):
+
+
+        self.temp_board = [[1 for _ in range(len(self.board[0]))] for _ in range(len(self.board))]
     def _play(self):
 
         score_start_time = None
@@ -777,41 +789,53 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    x,y = pygame.mouse.get_pos()
-                    self._highlight_square(x,y)
-                    if len(self.selected) == 2:
-                        square_1,square_2 = self.selected
+                if not self.game_over:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        x,y = pygame.mouse.get_pos()
+                        self._highlight_square(x,y)
+                        if len(self.selected) == 2:
+                            square_1,square_2 = self.selected
 
-                        start_ends = self._checkForThreeInARow(square_1,square_2)
-                        if start_ends:
-                            self.timer.sprite.increase_time()
-                            print()
-                            self.print_board()
-                            self._get_middle_between_two_squares(start_ends)
-                            score_start_time = time.time()
-                            squares_with_new_gems = self._dropAndInsertNewPieces2(start_ends)
-                            print(squares_with_new_gems)
-                            print()
-                            self.print_board()
+                            start_ends = self._checkForThreeInARow(square_1,square_2)
+                            if start_ends:
+                                self.timer.sprite.increase_time()
+                                print()
+                                self.print_board()
+                                self._get_middle_between_two_squares(start_ends)
+                                score_start_time = time.time()
+                                squares_with_new_gems = self._dropAndInsertNewPieces2(start_ends)
 
-                        self.selected.clear()
-                elif event.type == TIME_EVENT:
-                    self.timer.sprite.update()
+                                self._check_squares_with_new_gems()
+                                print(squares_with_new_gems)
+                                print()
+                                self.print_board()
+
+                            self.selected.clear()
+                    elif event.type == TIME_EVENT:
+                        self.timer.sprite.update()
 
             if score_start_time:
                 current_time = time.time()
                 if current_time - score_start_time >= 1:
                     score_start_time = None
                     self.score_texts = []
-
+            
+            if self.timer.sprite.at_zero():
+                self.game_over = True
         
-            self.squares.update()
+            if not self.game_over:
+                self.squares.update()
             self.screen.fill(BGCOLOR)
             self._draw_board()
             if score_start_time:
                 for score,coordinate in self.score_texts:
                     self.screen.blit(score,coordinate)
+            if self.game_over:
+                game_over_font = pygame.font.SysFont("calibri",60,bold=True)
+                game_over_text = game_over_font.render("GAME OVER",True,RED)
+                game_over_text_rect = game_over_text.get_rect(center=(self.screen_width//2,self.screen_height//2))
+                self.screen.blit(self.game_over_surface,(self.side_padding,self.top_padding))
+                self.screen.blit(game_over_text,game_over_text_rect)
 
             pygame.display.update()
 
