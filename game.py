@@ -121,6 +121,7 @@ class Game:
     INVALID_SWAP_SOUND = pygame.mixer.Sound(os.path.join('assets','badswap.wav'))
     SWAP_SOUNDS = [pygame.mixer.Sound(file) for file in glob('assets/match?.wav')]
     SCORE_FONT = pygame.font.SysFont("calibri",25,bold=True)
+    SCORE_FONT_BIG = pygame.font.SysFont("calibri",50,bold=True)
 
 
     def __init__(self,screen,rows=8,cols=8):
@@ -137,6 +138,8 @@ class Game:
         self.game_over = False
         self.game_over_surface = pygame.Surface((self.board_width,self.board_height),flags=pygame.SRCALPHA)
         self.game_over_surface.fill((0,0,0,128))
+        self.overall_score_text =  self.SCORE_FONT_BIG.render("0",True,BLACK)
+        self.overall_score = 0
 
 
 
@@ -643,6 +646,10 @@ class Game:
                 squares = max_value - min_value + 1
 
                 score = 100 + 20 * (squares - 3)
+                self.overall_score += score
+                self.overall_score_text = self.SCORE_FONT_BIG.render(f"{self.overall_score}",True,BLACK)
+
+
 
 
                 score_text = self.SCORE_FONT.render(f"+{score}",True,GREEN)
@@ -836,7 +843,8 @@ class Game:
                 game_over_text_rect = game_over_text.get_rect(center=(self.screen_width//2,self.screen_height//2))
                 self.screen.blit(self.game_over_surface,(self.side_padding,self.top_padding))
                 self.screen.blit(game_over_text,game_over_text_rect)
-
+            
+            self.screen.blit(self.overall_score_text,(0,0))
             pygame.display.update()
 
 
